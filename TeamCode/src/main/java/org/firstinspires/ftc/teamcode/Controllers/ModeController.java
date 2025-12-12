@@ -5,7 +5,7 @@ import com.qualcomm.robotcore.hardware.HardwareMap;
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 
 @Config
-public class ModeController {
+public class    ModeController {
     private ShooterControllerPIDVSA powerController = new ShooterControllerPIDVSA();
     private ServoPos servoPos = new ServoPos();
 

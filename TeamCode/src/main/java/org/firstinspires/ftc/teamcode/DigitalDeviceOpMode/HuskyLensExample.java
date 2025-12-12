@@ -1,9 +1,9 @@
-package org.firstinspires.ftc.teamcode.opMode;
+package org.firstinspires.ftc.teamcode.DigitalDeviceOpMode;
 
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 
-import org.firstinspires.ftc.teamcode.Controllers.HuskyLensAiCameraController;
+import org.firstinspires.ftc.teamcode.DigitalDeviceControllers.HuskyLensAiCameraController;
 
 @Autonomous
 public class HuskyLensExample extends OpMode {

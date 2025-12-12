@@ -1,9 +1,9 @@
-package org.firstinspires.ftc.teamcode.opMode;
+package org.firstinspires.ftc.teamcode.DigitalDeviceOpMode;
 
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
-import org.firstinspires.ftc.teamcode.Controllers.ColorSensor;
+import org.firstinspires.ftc.teamcode.DigitalDeviceControllers.ColorSensor;
 
 @TeleOp
 public class ColorSensorTest extends OpMode {

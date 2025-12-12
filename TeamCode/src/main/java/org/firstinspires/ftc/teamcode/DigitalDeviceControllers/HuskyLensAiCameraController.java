@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode.Controllers;
+package org.firstinspires.ftc.teamcode.DigitalDeviceControllers;
 
 import com.qualcomm.hardware.dfrobot.HuskyLens;
 import com.qualcomm.robotcore.hardware.HardwareMap;
