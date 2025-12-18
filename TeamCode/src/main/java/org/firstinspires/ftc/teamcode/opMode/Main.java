@@ -14,7 +14,7 @@ public class Main extends OpMode {
 
     @Override
     public void init() {
-        buildOpMode.initOpMode(hardwareMap);
+        buildOpMode.initOpMode(hardwareMap,telemetry);
         drive.initialize(hardwareMap, true);
     }
 
@@ -38,7 +38,8 @@ public class Main extends OpMode {
                 gamepad1.right_bumper,
                 gamepad1.left_trigger,
                 gamepad1.left_bumper,
-                gamepad1.dpad_up
+                gamepad1.dpad_up,
+                gamepad1.dpad_down
         );
 
         buildOpMode.showTelemetry(telemetry);

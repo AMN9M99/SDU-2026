@@ -10,7 +10,7 @@ public class HuskyLensAiCameraController {
     //tag id 1 = 23 id purple|purple|green
     //tag id 3 = 21 id green|purple|purple
 
-    private Integer savedTagID = null;  // переменная для сохранения ID один раз
+    private Integer savedTagID = null;
     private HuskyLens huskyLens;
     private HuskyLens.Block[] blocks = new HuskyLens.Block[0];
 
@@ -26,13 +26,11 @@ public class HuskyLensAiCameraController {
     public void update() {
         blocks = huskyLens.blocks();
 
-        // --- сохраняем первый найденный ID ---
         if (savedTagID == null && blocks.length > 0) {
             savedTagID = blocks[0].id;
         }
     }
 
-    // возвращает ID первого найденного тега
     public Integer getSavedTagID() {
         return savedTagID;
     }
@@ -55,7 +53,6 @@ public class HuskyLensAiCameraController {
             );
         }
 
-        // показываем сохранённый ID
         telemetry.addData("Saved Tag ID", savedTagID);
     }
 }

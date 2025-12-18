@@ -2,6 +2,8 @@ package org.firstinspires.ftc.teamcode.Controllers;
 
 import com.acmerobotics.dashboard.config.Config;
 import com.pedropathing.follower.Follower;
+import com.pedropathing.geometry.Pose;
+import com.qualcomm.robotcore.hardware.Gamepad;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import org.firstinspires.ftc.robotcore.external.Telemetry;
@@ -16,6 +18,7 @@ public class BuildOpMode {
     private IntakeController intake = new IntakeController();
     private ModeController modeController = new ModeController();
     private Follower follower;
+    private AutoParkingController autoParkingController =  new AutoParkingController();
 
     public static double tolerance = 100;
     public static int shootTime = 150;
@@ -33,11 +36,19 @@ public class BuildOpMode {
     private double robotY;
 
 
-    public void initOpMode(HardwareMap hw) {
-        intake.init(hw, "intake_1", "intake_2");
-        modeController.init(hw, "shooter_l", "shooter_r", "l_angle", "r_angle");
-        follower = Constants.createFollower(hw);
+    public void initOpMode(HardwareMap hardwareMap,Telemetry telemetry) {
+        intake.init(hardwareMap, "intake_1", "intake_2");
+        modeController.init(hardwareMap, "shooter_l", "shooter_r", "l_angle", "r_angle");
+
+        follower = Constants.createFollower(hardwareMap);
+        follower.setStartingPose(new Pose());
         follower.update();
+        // Инициализация AutoParkingController со всеми контроллерами из BuildOpMode
+        autoParkingController.init(follower, telemetry, intake, modeController);
+    }
+
+    public void AutoParkingMechanism(boolean dpadDown) {
+        autoParkingController.mechanism(dpadDown);
     }
 
     public void intakeFinal(double rightTrigger, boolean rightBumper, double leftTrigger, boolean b) {
@@ -91,9 +102,10 @@ public class BuildOpMode {
         }
     }
 
-    public void buildOpMode(boolean a, boolean x, boolean y, boolean b, double rightTrigger, boolean rightBumper, double leftTrigger, boolean leftBumper, boolean dpadUp) {
+    public void buildOpMode(boolean a, boolean x, boolean y, boolean b, double rightTrigger, boolean rightBumper, double leftTrigger, boolean leftBumper, boolean dpadUp,boolean dpadDown) {
         autoShooterMode(a, x, y, leftBumper, dpadUp);
         intakeFinal(rightTrigger, rightBumper, leftTrigger, b);
+        AutoParkingMechanism(dpadDown);
     }
 
     public IntakeState getState() {
@@ -105,5 +117,7 @@ public class BuildOpMode {
         telemetry.addData("Intake State", getState());
         telemetry.addData("Shooter Ready", modeController.shooterIsReady(tolerance));
         modeController.showTelemetry(telemetry);
+        autoParkingController.showTelemetry(telemetry);
+        telemetry.addData("Сеня","гандон");
     }
 }
