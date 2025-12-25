@@ -1,232 +1,172 @@
 package org.firstinspires.ftc.teamcode.Controllers;
 
-import com.acmerobotics.dashboard.config.Config;
 
+import com.pedropathing.follower.Follower;
 import com.pedropathing.geometry.Pose;
 import com.qualcomm.hardware.gobilda.GoBildaPinpointDriver;
-import com.qualcomm.robotcore.hardware.DcMotor;
-import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.HardwareMap;
-import com.qualcomm.robotcore.hardware.PIDCoefficients;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
-import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
-import org.firstinspires.ftc.robotcore.external.navigation.Pose2D;
-import org.firstinspires.ftc.teamcode.Utils.asmPIDController;
-import org.firstinspires.ftc.teamcode.Utils.asmPIDFController;
+import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 
-@Config
+
 public class BaseController {
-    private double targetHeading = 0;
-    private asmPIDFController headingPIDF;
-
-    public static double Kp = 0.3;
-    public static double Ki = 0;
-    public static double Kd = 0.01;
-    public static double Kf = 0.01;
 
 
 
-    DcMotor Lfront = null;
-    DcMotor Rfront = null;
-    DcMotor Rback = null;
-    DcMotor Lback = null;
+    private double lastHeading, currentHeading, setPos;
+    private double angleTarget;
 
-    GoBildaPinpointDriver pinpoint = null;
+    private GoBildaPinpointDriver pinpoint = null;
 
-
-
-    public void initialize(HardwareMap hardwareMap,boolean useBrakeMode){
-        headingPIDF = new asmPIDFController(Kp, Ki, Kd,Kf);
-        headingPIDF.setSetPoint(targetHeading);
-        headingPIDF.setTolerance(0.5);
-
-        Lfront = hardwareMap.get(DcMotor.class,"lfd");
-        Rfront = hardwareMap.get(DcMotor.class,"rfd");
-        Lback = hardwareMap.get(DcMotor.class,"lbd");
-        Rback = hardwareMap.get(DcMotor.class,"rbd");
-
-        Lfront.setDirection(DcMotorSimple.Direction.FORWARD);
-        Rfront.setDirection(DcMotorSimple.Direction.REVERSE);
-        Lback.setDirection(DcMotorSimple.Direction.FORWARD);
-        Rback.setDirection(DcMotorSimple.Direction.REVERSE);
-
-        //        Lfront.setRunMode(Motor.RunMode.VelocityControl);
-        //        Rfront.setRunMode(Motor.RunMode.VelocityControl);
-        //        Lback.setRunMode(Motor.RunMode.VelocityControl);
-        //        Rback.setRunMode(Motor.RunMode.VelocityControl);
-        //
-        //        Lfront.setFeedforwardCoefficients(kS,kV,kA);
-        //        Rfront.setFeedforwardCoefficients(kS,kV,kA);
-        //        Lback.setFeedforwardCoefficients(LBackkS,LBackkV,LBackkA);
-        //        Rback.setFeedforwardCoefficients(kS,kV,kA);
-        //
-        //        Lfront.setVeloCoefficients(KP, KI, KD);
-        //        Rfront.setVeloCoefficients(KP, KI, KD);
-        //        Lback.setVeloCoefficients(LBackKP, LBackKI, LBackKD);
-        //        Rback.setVeloCoefficients(KP, KI, KD);
-
-        if(useBrakeMode){
-            Lfront.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-            Rfront.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-            Lback.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-            Rback.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-        }else{
-            Lfront.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
-            Rfront.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
-            Lback.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
-            Rback.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
-        }
+    private Follower follower;
 
 
-
-
-        pinpoint = hardwareMap.get(GoBildaPinpointDriver.class, "pinpoint");
-        pinpoint.initialize();
-        pinpoint.resetDeviceConfigurationForOpMode();
+    public void init(HardwareMap hardwareMap) {
+        pinpoint = hardwareMap.get(GoBildaPinpointDriver.class,"pinpoint");
         pinpoint.recalibrateIMU();
         pinpoint.resetPosAndIMU();
-        pinpoint.setPosition(new Pose2D(DistanceUnit.CM,0,0,AngleUnit.RADIANS,0));
-//            pinpoint.setOffsets();
-    }
-
-    public void update(double leftX,double leftY,double rightX, double turnCoeff,boolean headingToTarget,boolean isRobotCentric){
-        pinpoint.update(GoBildaPinpointDriver.ReadData.ONLY_UPDATE_HEADING);
-
-        if(isRobotCentric){
-            driveFieldCentric(
-                    leftX,
-                    leftY,
-                    rightX /turnCoeff,
-                    0,
-                    headingToTarget
-            );
-        }else{
-            driveFieldCentric(
-                    leftX,
-                    leftY,
-                    rightX /turnCoeff,
-                    pinpoint.getHeading(AngleUnit.RADIANS),
-                    headingToTarget
-            );
-        }
-
-    }
-
-
-
-    public void driveFieldCentric(double strafeSpeed, double forwardSpeed,
-                                  double turnSpeed, double gyroAngle,boolean headingLockEnabled) {
-
-        strafeSpeed = clipRange(strafeSpeed);
-        forwardSpeed = clipRange(forwardSpeed);
-        turnSpeed = clipRange(turnSpeed);
-
-        // --------------------------HEADINGLOCK----------------------
-        if (headingLockEnabled) {
-            headingPIDF.setSetPoint(targetHeading);
-            double correction = headingPIDF.calculate(pinpoint.getHeading(AngleUnit.RADIANS));
-
-            turnSpeed = correction;
-        }
-
-        double rotatedStrafe = strafeSpeed * Math.cos(-gyroAngle) - forwardSpeed * Math.sin(-gyroAngle);
-        double rotatedForward = strafeSpeed * Math.sin(-gyroAngle) + forwardSpeed * Math.cos(-gyroAngle);
-
-
-        double theta = Math.atan2(rotatedForward, rotatedStrafe);
-        double magnitude = Math.sqrt(rotatedStrafe * rotatedStrafe + rotatedForward * rotatedForward);
-
-        double[] wheelSpeeds = new double[4];
-        wheelSpeeds[0] = Math.sin(theta + Math.PI / 4);
-        wheelSpeeds[1] = Math.sin(theta - Math.PI / 4);
-        wheelSpeeds[2] = Math.sin(theta - Math.PI / 4);
-        wheelSpeeds[3] = Math.sin(theta + Math.PI / 4);
-
-        normalizeWithMagnitude(wheelSpeeds, magnitude);
-
-        wheelSpeeds[0] += turnSpeed;
-        wheelSpeeds[1] -= turnSpeed;
-        wheelSpeeds[2] += turnSpeed;
-        wheelSpeeds[3] -= turnSpeed;
-
-        normalize(wheelSpeeds);
-
-        driveWithMotorPowers(wheelSpeeds[0], wheelSpeeds[1], wheelSpeeds[2], wheelSpeeds[3]);
-    }
-
-    private double clipRange(double value) {
-        return Math.max(-1.0, Math.min(1.0, value));
-    }
-
-    private void normalizeWithMagnitude(double[] wheelSpeeds, double magnitude) {
-        double maxMagnitude = 0;
-        for (double speed : wheelSpeeds) {
-            maxMagnitude = Math.max(maxMagnitude, Math.abs(speed));
-        }
-
-        if (maxMagnitude > 0) {
-            for (int i = 0; i < wheelSpeeds.length; i++) {
-                wheelSpeeds[i] = (wheelSpeeds[i] / maxMagnitude) * magnitude;
-            }
-        }
-    }
-
-    private void normalize(double[] wheelSpeeds) {
-        double maxMagnitude = 0;
-        for (double speed : wheelSpeeds) {
-            maxMagnitude = Math.max(maxMagnitude, Math.abs(speed));
-        }
-
-        if (maxMagnitude > 1.0) {
-            for (int i = 0; i < wheelSpeeds.length; i++) {
-                wheelSpeeds[i] /= maxMagnitude;
-            }
-        }
-    }
-    public void setTargetHeading(){
-        targetHeading = pinpoint.getHeading(AngleUnit.RADIANS);
-        headingPIDF.setSetPoint(targetHeading);
-    }
-    public void resetHeading(double yawScalar){
-        pinpoint.setHeading(0,AngleUnit.RADIANS);
-        pinpoint.recalibrateIMU();
-        pinpoint.setYawScalar(1);
-        pinpoint.setEncoderResolution(GoBildaPinpointDriver.GoBildaOdometryPods.goBILDA_4_BAR_POD);
-//            pinpoint.resetDeviceConfigurationForOpMode();
         pinpoint.resetPosAndIMU();
-//            pinpoint.resetDeviceConfigurationForOpMode();
-//            pinpoint.setPosition(new Pose2D(DistanceUnit.CM,0,0,AngleUnit.RADIANS,0));
+        pinpoint.setHeading(0, AngleUnit.RADIANS);
+
+
+        follower = Constants.createFollower(hardwareMap);
+        follower.update();
+
+
+        follower.startTeleopDrive(true);
+        follower.setStartingPose(new Pose(0, 0, 0));
 
     }
-    public void resetHeading(Pose robotPose){
-        pinpoint.setHeading(0,AngleUnit.RADIANS);
-        pinpoint.recalibrateIMU();
-//            pinpoint.resetPosAndIMU();
-//            pinpoint.resetDeviceConfigurationForOpMode();
-//            pinpoint.setPosition(new Pose2D(DistanceUnit.CM,0,0,AngleUnit.RADIANS,0));
 
+
+
+
+    public void update(double left_stick_y, double left_stick_x, double right_stick_x,boolean back, Telemetry telemetry) {
+        if (back){
+            pinpoint.setHeading(0,AngleUnit.RADIANS);
+//            pinpoint.setPosX(follower.getPose().getX() ,AngleUnit.RADIANS);
+            pinpoint.recalibrateIMU();
+
+            Pose bPose = new Pose(follower.getPose().getX(),follower.getPose().getY(),0);
+            follower.setPose(bPose);
+        }
+
+        double forward = -left_stick_y;
+        double strafe = -left_stick_x;
+        double rotate = -right_stick_x;
+
+        if (forward <= 0.05 && forward >= -0.05) {
+            forward = 0;
+        }
+        if (strafe <= 0.05 && strafe >= -0.05) {
+            strafe = 0;
+        }
+        if (rotate <= 0.05 && rotate >= -0.05) {
+            rotate = 0;
+        }
+
+        follower.update();
+        follower.setTeleOpDrive(
+                forward,
+                strafe,
+                rotate * 0.7,
+                false // Robot Centric
+        );
+        telemetry.addData("robot X: ", follower.getPose().getX());
+        telemetry.addData("robot Y: ", follower.getPose().getY());
+        telemetry.addData("robot Y: ", follower.getPose().getY());
     }
-
-
-    private void driveWithMotorPowers(double frontLeft, double frontRight,
-                                      double backLeft, double backRight) {
-        Lfront.setPower(frontLeft);
-        Rfront.setPower(frontRight);
-        Lback.setPower(backLeft);
-        Rback.setPower(backRight);
+    public double getX(){
+        return follower.getPose().getX();
     }
-
-    public void viewTelemetry(Telemetry telemetry){
-        telemetry.addLine("====================BASE=========================");
-        telemetry.addData("Target Heading",targetHeading);
-        telemetry.addData("heading error: ",headingPIDF.getPositionError());
-        telemetry.addData("velocity error: ",headingPIDF.getVelocityError());
-        telemetry.addData("Angle in radian",pinpoint.getHeading(AngleUnit.RADIANS));
-        telemetry.addData("Angle in degrees",pinpoint.getHeading(AngleUnit.DEGREES));
-        telemetry.addData("Debug",pinpoint.getConnectionInfo());
-        telemetry.addData("X",pinpoint.getPosX(DistanceUnit.CM));
-        telemetry.addData("Y",pinpoint.getPosY(DistanceUnit.CM));
+    public double getY(){
+        return follower.getPose().getY();
     }
-}
+    public double getAngle(){return follower.getHeading();}
+
+
+
+
+        }
+
+
+
+
+
+//    public Follower getFollower() {
+//        return follower;
+//    }
+//
+//    public double getX() {
+//        return follower.getPose().getX();
+//    }
+//
+//    public double getY() {
+//        return follower.getPose().getY();
+//    }
+//    public double HeadingRobot(){
+//        return follower.getHeading();
+//    }
+//    public void followUpdate(){
+//        follower.update();
+//    }
+//
+//    public double turretController( double robotX, double robotY, double targetX, double targetY) {
+////     fieldDriveController.followUpdate();
+//
+//        angleTarget = utilAngle.calculateAbsoluteAngleDifference(robotX, robotY, targetX, targetY);
+//        lastHeading = currentHeading;
+//        double heading = Math.toDegrees(follower.getHeading());
+//        currentHeading = heading;
+//        setPos = currentHeading;
+//        if (setPos > 180) {
+//            setPos += -360;
+//        }
+//        if (setPos < -180) {
+//            setPos += 360;
+//        }
+//
+//
+//        setPos = setPos * utilEncoder.getDivisionPrice();
+//        if (setPos > 350) {
+//            setPos += (-700);
+//        }
+//        if (setPos < -350) {
+//            setPos += 700;
+//        }
+//
+////        pidfTurret.updatePIDTurret(setPos);
+//
+//        return setPos;
+//
+//    }
+////    public void showTelemetry(Telemetry telemetry){
+////     follower.update();
+////        double fds = turretController (getX(), getY(), 0,0);
+////        double angleTarget21 = utilAngle.calculateAbsoluteAngleDifference(getX(), getY(), 0,0);
+////        double dsaf = Math.toDegrees(follower.getHeading());
+////        telemetry.addData("TurretController",fds );
+////        telemetry.addData("Heading", dsaf);
+////        telemetry.addData("last" , lastHeading);
+////        telemetry.addData("TurretController",currentHeading );
+//
+//
+//
+//
+//
+//    }
+//    public void TurretTeleOp(boolean dpadRight, boolean dpadLeft){
+//        if (dpadRight){
+//            servoPos.setTurret(1);
+//        }else {servoPos.setTurret(0);}
+//    if (dpadLeft){
+//
+//        servoPos.setTurret(-1);
+//    }else {servoPos.setTurret(0);}
+//    }
+//}
+
+
+
